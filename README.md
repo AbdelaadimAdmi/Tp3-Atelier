@@ -123,3 +123,5 @@ Lancer les scripts dans cet ordre sur la pile complète et sans autres producteu
 
 Le [rapport de deux pages](output/pdf/Rapport_Ateliers_Microservices.pdf) répond aux questions de l’atelier 1. Utiliser le [rapport Word modifiable](output/Rapport_Ateliers_Microservices.docx) et le [guide de capture](evidence/CAPTURES.md) pour insérer les preuves avant l’export. L’[index des preuves](evidence/README.md) contient les captures et les sorties déjà enregistrées.
 
+#   T p 3 - A t e l i e r  
+ 
