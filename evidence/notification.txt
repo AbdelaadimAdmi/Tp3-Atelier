@@ -1,0 +1,2 @@
+notification-service-1  | 2026-11-08T22:32:35.577Z  INFO 1 --- [notification-service] [ntContainer#0-1] c.e.n.RabbitNotificationListener         : RabbitMQ reçu orderId=a97b7d16-e02e-427c-9b0c-c49a3949020b redelivered=false
+notification-service-1  | 2026-11-08T22:32:35.578Z  INFO 1 --- [notification-service] [ntContainer#0-1] c.e.n.RabbitNotificationListener         : Notification simulée orderId=a97b7d16-e02e-427c-9b0c-c49a3949020b email=client@example.com

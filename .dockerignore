@@ -1,0 +1,10 @@
+**/target
+.git
+.idea
+*.pdf
+*.md
+evidence
+.work
+scripts
+.env
+output

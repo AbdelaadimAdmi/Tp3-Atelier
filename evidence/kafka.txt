@@ -1,0 +1,26 @@
+=== Kafka : partitions, commits et messages en erreur ===
+Topic: commandes-creees	TopicId: lRBvwfEVTxS2VbFuFE6wPw	PartitionCount: 3	ReplicationFactor: 1	Configs: 
+	Topic: commandes-creees	Partition: 0	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+	Topic: commandes-creees	Partition: 1	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+	Topic: commandes-creees	Partition: 2	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr:
+Topic: orders-events	TopicId: 4fVb2LCkTai6e0pfoSkzzA	PartitionCount: 3	ReplicationFactor: 1	Configs: 
+	Topic: orders-events	Partition: 0	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+	Topic: orders-events	Partition: 1	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+	Topic: orders-events	Partition: 2	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr:
+notification-service-1  | 2026-11-08T22:32:56.035Z  WARN 1 --- [notification-service] [ntainer#0-0-C-1] c.e.n.KafkaNotificationListener          : Échec Kafka simulé key=d7c329e4-acf9-40d1-aad1-bd890fb4494f partition=0 offset=9
+notification-service-1  | 2026-11-08T22:32:56.523Z  WARN 1 --- [notification-service] [ntainer#0-0-C-1] c.e.n.KafkaNotificationListener          : Échec Kafka simulé key=d7c329e4-acf9-40d1-aad1-bd890fb4494f partition=0 offset=9
+notification-service-1  | 2026-11-08T22:32:57.028Z  WARN 1 --- [notification-service] [ntainer#0-0-C-1] c.e.n.KafkaNotificationListener          : Échec Kafka simulé key=d7c329e4-acf9-40d1-aad1-bd890fb4494f partition=0 offset=9
+notification-service-1  | 2026-11-08T22:32:58.358Z  INFO 1 --- [notification-service] [ntainer#0-0-C-1] c.e.n.KafkaNotificationListener          : Kafka reçu topic=orders-events key=3bf2a517-cdf3-414f-82f9-12702c81391f partition=2 offset=1
+GROUP                 TOPIC            PARTITION  CURRENT-OFFSET  LOG-END-OFFSET  LAG             CONSUMER-ID                                                           HOST            CLIENT-ID
+atelier-notifications orders-events    0          12              12              0               consumer-atelier-notifications-1-1e7f853f-a4b7-443d-9020-54181c6b7928 /172.18.0.7     consumer-atelier-notifications-1
+atelier-notifications orders-events    1          5               5               0               consumer-atelier-notifications-1-1e7f853f-a4b7-443d-9020-54181c6b7928 /172.18.0.7     consumer-atelier-notifications-1
+atelier-notifications orders-events    2          2               2               0               consumer-atelier-notifications-1-1e7f853f-a4b7-443d-9020-54181c6b7928 /172.18.0.7     consumer-atelier-notifications-1
+atelier-notifications commandes-creees 0          4               4               0               consumer-atelier-notifications-1-1e7f853f-a4b7-443d-9020-54181c6b7928 /172.18.0.7     consumer-atelier-notifications-1
+atelier-notifications commandes-creees 2          6               6               0               consumer-atelier-notifications-1-1e7f853f-a4b7-443d-9020-54181c6b7928 /172.18.0.7     consumer-atelier-notifications-1
+atelier-notifications commandes-creees 1          4               4               0               consumer-atelier-notifications-1-1e7f853f-a4b7-443d-9020-54181c6b7928 /172.18.0.7     consumer-atelier-notifications-1
+Topic orders-events.DLT (commande du test) :
+Partition:0	Offset:1	d7c329e4-acf9-40d1-aad1-bd890fb4494f	{"orderId":"d7c329e4-acf9-40d1-aad1-bd890fb4494f","customerEmail":"client@example.com","amount":3248.70,"createdAt":"2026-11-08T22:32:52.290385234Z","productId":1,"quantity":13,"status":"CREATED"}
+
+Métadonnées du producteur Java
+order-service-1  | 2026-11-08T22:32:35.514Z  INFO 1 --- [order-service] [vice-producer-1] com.example.order.OrderEventPublisher    : Kafka publié key=a97b7d16-e02e-427c-9b0c-c49a3949020b topic=commandes-creees partition=0 offset=3
+order-service-1  | 2026-11-08T22:32:52.298Z  INFO 1 --- [order-service] [vice-producer-1] com.example.order.OrderEventPublisher    : Kafka publié key=d7c329e4-acf9-40d1-aad1-bd890fb4494f topic=orders-events partition=0 offset=9

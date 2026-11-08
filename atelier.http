@@ -1,0 +1,21 @@
+# Port 8082 pour la pile complète. Utiliser 8081 en mode autonome.
+@orderBase = http://127.0.0.1:8082
+
+### Figure 1 - Commande acceptée
+POST {{orderBase}}/api/orders
+Content-Type: application/json
+
+{
+  "customerEmail": "client@example.com",
+  "amount": 149.90
+}
+
+### Figure 3 - Échec de traitement RabbitMQ
+# La réponse HTTP reste 201. L'échec survient dans Notification Service.
+POST {{orderBase}}/api/orders
+Content-Type: application/json
+
+{
+  "customerEmail": "client@example.com",
+  "amount": 13
+}

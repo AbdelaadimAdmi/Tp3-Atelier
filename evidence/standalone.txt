@@ -1,0 +1,12 @@
+NAME                                         IMAGE                                      COMMAND                  SERVICE                CREATED          STATUS                    PORTS
+springcloud-atelier-kafka-1                  apache/kafka:3.9.1                         "/__cacert_entrypoin…"   kafka                  14 minutes ago   Up 14 minutes (healthy)   127.0.0.1:9092->9092/tcp
+springcloud-atelier-notification-service-1   springcloud-atelier-notification-service   "java -XX:MaxRAMPerc…"   notification-service   9 seconds ago    Up 7 seconds              127.0.0.1:8082->8082/tcp
+springcloud-atelier-order-service-1          springcloud-atelier-order-service          "java -XX:MaxRAMPerc…"   order-service          9 seconds ago    Up 7 seconds              127.0.0.1:8081->8081/tcp
+springcloud-atelier-rabbitmq-1               rabbitmq:3-management                      "docker-entrypoint.s…"   rabbitmq               15 minutes ago   Up 15 minutes (healthy)   127.0.0.1:5672->5672/tcp, 127.0.0.1:15672->15672/tcp
+
+POST http://127.0.0.1:8081/api/orders  ->  HTTP 201
+  Requête {"customerEmail": "client@example.com", "amount": 149.9}
+  Réponse {"orderId": "0f715268-d5e8-4960-8336-a0ba00ea90d4", "customerEmail": "client@example.com", "amount": 149.9, "createdAt": "2026-11-08T22:35:10.062547892Z", "productId": null, "quantity": null, "status": "CREATED"}
+notification-service-1  | 2026-11-08T22:35:10.137Z  INFO 1 --- [notification-service] [ntContainer#0-1] c.e.n.RabbitNotificationListener         : RabbitMQ reçu orderId=0f715268-d5e8-4960-8336-a0ba00ea90d4 redelivered=false
+notification-service-1  | 2026-11-08T22:35:10.138Z  INFO 1 --- [notification-service] [ntContainer#0-1] c.e.n.RabbitNotificationListener         : Notification simulée orderId=0f715268-d5e8-4960-8336-a0ba00ea90d4 email=client@example.com
+notification-service-1  | 2026-11-08T22:35:10.237Z  INFO 1 --- [notification-service] [ntainer#0-0-C-1] c.e.n.KafkaNotificationListener          : Kafka reçu topic=commandes-creees key=0f715268-d5e8-4960-8336-a0ba00ea90d4 partition=0 offset=6

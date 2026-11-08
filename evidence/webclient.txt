@@ -1,0 +1,7 @@
+order-service-1  | 2026-11-08T22:34:50.027Z  INFO 1 --- [order-service] [           main] com.example.order.ProductLookup          : Client produit actif : WEBCLIENT
+POST http://127.0.0.1:8180/orders  ->  HTTP 201
+  Requête {"productId": 1, "quantity": 2}
+  Réponse {"orderId": "cce935d0-7138-4316-9392-a7fcaca16961", "status": "CREATED", "product": {"id": 1, "name": "Clavier", "price": 249.9}, "quantity": 2, "total": 499.8}
+POST http://127.0.0.1:8180/orders  ->  HTTP 404
+  Requête {"productId": 2, "quantity": 2}
+  Réponse {"type": "about:blank", "title": "Not Found", "status": 404, "detail": "Produit introuvable", "instance": "/orders"}

@@ -1,0 +1,23 @@
+=== RabbitMQ : arrêt, attente et reprise ===
+POST http://127.0.0.1:8180/orders  ->  HTTP 201
+  Requête {"productId": 1, "quantity": 2, "customerEmail": "client@example.com"}
+  Réponse {"orderId": "7132e954-cf2c-40eb-818e-5861bce30df4", "status": "CREATED", "product": {"id": 1, "name": "Clavier", "price": 249.9}, "quantity": 2, "total": 499.8}
+Notification arrêtée, file orders.notifications : ready=1
+Après redémarrage : notification reçue, file vide après ACK.
+POST http://127.0.0.1:8180/orders  ->  HTTP 201
+  Requête {"productId": 1, "quantity": 13, "customerEmail": "client@example.com"}
+  Réponse {"orderId": "d7c329e4-acf9-40d1-aad1-bd890fb4494f", "status": "CREATED", "product": {"id": 1, "name": "Clavier", "price": 249.9}, "quantity": 13, "total": 3248.7}
+DLQ RabbitMQ : 2 -> 3, 3 tentatives.
+notification-service-1  | 2026-11-08T22:32:52.293Z  WARN 1 --- [notification-service] [ntContainer#0-1] c.e.n.RabbitNotificationListener         : Échec RabbitMQ simulé orderId=d7c329e4-acf9-40d1-aad1-bd890fb4494f
+notification-service-1  | 2026-11-08T22:32:52.596Z  WARN 1 --- [notification-service] [ntContainer#0-1] c.e.n.RabbitNotificationListener         : Échec RabbitMQ simulé orderId=d7c329e4-acf9-40d1-aad1-bd890fb4494f
+notification-service-1  | 2026-11-08T22:32:52.897Z  WARN 1 --- [notification-service] [ntContainer#0-1] c.e.n.RabbitNotificationListener         : Échec RabbitMQ simulé orderId=d7c329e4-acf9-40d1-aad1-bd890fb4494f
+POST http://127.0.0.1:8180/orders  ->  HTTP 201
+  Requête {"productId": 1, "quantity": 7, "customerEmail": "client@example.com"}
+  Réponse {"orderId": "3bf2a517-cdf3-414f-82f9-12702c81391f", "status": "CREATED", "product": {"id": 1, "name": "Clavier", "price": 249.9}, "quantity": 7, "total": 1749.3}
+Arrêt brutal pendant un traitement : redelivered=true, puis notification.
+Republication du même orderId : notification déjà traitée, aucun second effet.
+
+Logs de redélivrance et déduplication
+notification-service-1  | 2026-11-08T22:33:11.033Z  INFO 1 --- [notification-service] [ntContainer#0-1] c.e.n.RabbitNotificationListener         : RabbitMQ reçu orderId=3bf2a517-cdf3-414f-82f9-12702c81391f redelivered=true
+notification-service-1  | 2026-11-08T22:33:21.035Z  INFO 1 --- [notification-service] [ntContainer#0-1] c.e.n.RabbitNotificationListener         : Notification simulée orderId=3bf2a517-cdf3-414f-82f9-12702c81391f email=client@example.com
+notification-service-1  | 2026-11-08T22:33:21.643Z  INFO 1 --- [notification-service] [ntContainer#0-1] c.e.n.RabbitNotificationListener         : Notification déjà traitée orderId=a97b7d16-e02e-427c-9b0c-c49a3949020b

@@ -1,0 +1,32 @@
+server:
+  port: 8083
+spring:
+  application:
+    name: notification-service
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    username: ${RABBITMQ_USER:atelier}
+    password: ${RABBITMQ_PASSWORD:atelier123}
+    listener:
+      simple:
+        acknowledge-mode: auto
+        default-requeue-rejected: false
+        prefetch: 1
+        retry:
+          enabled: true
+          max-attempts: 3
+          initial-interval: 300ms
+          multiplier: 1
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    listener:
+      ack-mode: manual_immediate
+    consumer:
+      group-id: ${KAFKA_GROUP_ID:atelier-notifications}
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+    producer:
+      acks: all
+atelier:
+  notification:
+    directory: ${NOTIFICATION_DIRECTORY:./.work/notifications}

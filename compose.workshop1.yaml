@@ -1,0 +1,17 @@
+# Run with: docker compose -f compose.yaml -f compose.workshop1.yaml up --build -d order-service notification-service
+services:
+  order-service:
+    environment:
+      SPRING_PROFILES_ACTIVE: standalone
+    ports: !override
+      - "127.0.0.1:8081:8081"
+    depends_on: !override
+      rabbitmq:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+  notification-service:
+    environment:
+      SERVER_PORT: 8082
+    ports: !override
+      - "127.0.0.1:8082:8082"

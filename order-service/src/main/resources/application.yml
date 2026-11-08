@@ -1,0 +1,84 @@
+server:
+  port: 8082
+spring:
+  application:
+    name: order-service
+  mvc:
+    problemdetails:
+      enabled: true
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    username: ${RABBITMQ_USER:atelier}
+    password: ${RABBITMQ_PASSWORD:atelier123}
+    connection-timeout: 2s
+    publisher-confirm-type: correlated
+    publisher-returns: true
+    template:
+      mandatory: true
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      acks: all
+      properties:
+        "[max.block.ms]": 1000
+        "[request.timeout.ms]": 5000
+        "[delivery.timeout.ms]": 10000
+  cloud:
+    openfeign:
+      client:
+        config:
+          default:
+            connectTimeout: 700
+            readTimeout: 900
+    loadbalancer:
+      cache:
+        enabled: false
+      retry:
+        enabled: false
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URL:http://localhost:8761/eureka/}
+    registry-fetch-interval-seconds: 5
+  instance:
+    prefer-ip-address: true
+    lease-renewal-interval-in-seconds: 5
+    lease-expiration-duration-in-seconds: 15
+resilience4j:
+  circuitbreaker:
+    instances:
+      productService:
+        sliding-window-size: 5
+        minimum-number-of-calls: 3
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 1
+        ignore-exceptions:
+          - org.springframework.web.server.ResponseStatusException
+  retry:
+    instances:
+      productService:
+        max-attempts: 2
+        wait-duration: 300ms
+        retry-exceptions:
+          - com.example.order.ProductLookup$Unavailable
+---
+spring:
+  config:
+    activate:
+      on-profile: "!standalone"
+    import: "configserver:${CONFIG_SERVER_URL:http://localhost:8888}"
+---
+spring:
+  config:
+    activate:
+      on-profile: standalone
+  cloud:
+    config:
+      enabled: false
+eureka:
+  client:
+    enabled: false
+server:
+  port: 8081
+

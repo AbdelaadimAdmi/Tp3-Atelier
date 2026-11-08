@@ -1,0 +1,10 @@
+target/
+.idea/
+*.iml
+.env
+.work/
+__pycache__/
+
+# Original workshop handouts
+Atelier_Java_JEE_Microservices_RabbitMQ_Kafka.pdf
+Atelier_Suite_Microservices_SpringCloud_RabbitMQ_Kafka.pdf

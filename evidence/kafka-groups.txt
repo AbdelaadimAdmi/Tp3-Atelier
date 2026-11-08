@@ -1,0 +1,41 @@
+Topic commandes-creees
+
+Même clé 8ea37e57-a782-4c62-89a3-7db568d81932
+  Partition 2, offset 6
+  Partition 2, offset 7
+  Partition 2, offset 8
+
+Clés différentes
+  Partition 0, offset 4, clé c617889f-cle-4
+  Partition 0, offset 5, clé c617889f-cle-5
+  Partition 2, offset 9, clé c617889f-cle-0
+  Partition 2, offset 10, clé c617889f-cle-6
+  Partition 2, offset 11, clé c617889f-cle-7
+  Partition 1, offset 4, clé c617889f-cle-1
+  Partition 1, offset 5, clé c617889f-cle-2
+  Partition 1, offset 6, clé c617889f-cle-3
+
+Deux membres et leurs partitions
+GROUP                    CONSUMER-ID                                   HOST            CLIENT-ID       #PARTITIONS     ASSIGNMENT
+atelier-partage-c617889f member-a-f1e7ce31-80f2-4028-872f-74e211fbd7dd /172.18.0.6     member-a        2               (0,1)
+atelier-partage-c617889f member-b-31b6c660-8c5d-4289-a606-b2638ad2da0c /172.18.0.6     member-b        1               (2)
+
+Groupe partagé avant arrêt
+GROUP                    TOPIC            PARTITION  CURRENT-OFFSET  LOG-END-OFFSET  LAG             CONSUMER-ID                                   HOST            CLIENT-ID
+atelier-partage-c617889f commandes-creees 0          6               6               0               member-a-f1e7ce31-80f2-4028-872f-74e211fbd7dd /172.18.0.6     member-a
+atelier-partage-c617889f commandes-creees 1          7               7               0               member-a-f1e7ce31-80f2-4028-872f-74e211fbd7dd /172.18.0.6     member-a
+atelier-partage-c617889f commandes-creees 2          12              12              0               member-b-31b6c660-8c5d-4289-a606-b2638ad2da0c /172.18.0.6     member-b
+
+Groupe indépendant démarré avec latest
+GROUP                        TOPIC            PARTITION  CURRENT-OFFSET  LOG-END-OFFSET  LAG             CONSUMER-ID                                      HOST            CLIENT-ID
+atelier-independant-c617889f commandes-creees 0          6               6               0               independent-46597584-7557-412b-8a65-307789423712 /172.18.0.6     independent
+atelier-independant-c617889f commandes-creees 2          12              12              0               independent-46597584-7557-412b-8a65-307789423712 /172.18.0.6     independent
+atelier-independant-c617889f commandes-creees 1          8               8               0               independent-46597584-7557-412b-8a65-307789423712 /172.18.0.6     independent
+Partition:1	Offset:7	c617889f-nouvel-offset
+
+Groupe partagé redémarré, un seul nouvel offset
+GROUP                    TOPIC            PARTITION  CURRENT-OFFSET  LOG-END-OFFSET  LAG             CONSUMER-ID                                         HOST            CLIENT-ID
+atelier-partage-c617889f commandes-creees 0          6               6               0               member-restart-72311b7c-6493-4ac5-a77f-51511f45265d /172.18.0.6     member-restart
+atelier-partage-c617889f commandes-creees 2          12              12              0               member-restart-72311b7c-6493-4ac5-a77f-51511f45265d /172.18.0.6     member-restart
+atelier-partage-c617889f commandes-creees 1          8               8               0               member-restart-72311b7c-6493-4ac5-a77f-51511f45265d /172.18.0.6     member-restart
+Partition:1	Offset:7	c617889f-nouvel-offset

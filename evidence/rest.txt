@@ -1,0 +1,30 @@
+Vérification démarrée à 2026-11-08T22:32:34+00:00
+
+=== Discovery, Config Server et REST ===
+Eureka : API-GATEWAY, ORDER-SERVICE, PRODUCT-SERVICE
+GET http://127.0.0.1:8888/product-service/default  ->  HTTP 200
+  Réponse {"name": "product-service", "profiles": ["default"], "label": null, "version": null, "state": null, "propertySources": [{"name": "file:config-repo/product-service.yml", "source": {"message.bienvenue": "Configuration chargée depuis Config Server"}}]}
+GET http://127.0.0.1:8081/products/config  ->  HTTP 200
+  Réponse {"bienvenue": "Configuration chargée depuis Config Server"}
+GET http://127.0.0.1:8081/products/1  ->  HTTP 200
+  Réponse {"id": 1, "name": "Clavier", "price": 249.9}
+GET http://127.0.0.1:8180/products/1  ->  HTTP 200
+  Réponse {"id": 1, "name": "Clavier", "price": 249.9}
+POST http://127.0.0.1:8082/orders  ->  HTTP 201
+  Requête {"productId": 1, "quantity": 2, "customerEmail": "client@example.com"}
+  Réponse {"orderId": "5e6a26cf-e88c-4130-a48d-03e211b3585e", "status": "CREATED", "product": {"id": 1, "name": "Clavier", "price": 249.9}, "quantity": 2, "total": 499.8}
+POST http://127.0.0.1:8180/orders  ->  HTTP 201
+  Requête {"productId": 1, "quantity": 2, "customerEmail": "client@example.com"}
+  Réponse {"orderId": "9cc15fcb-f149-4aa8-a4c7-4a51a20a3e6d", "status": "CREATED", "product": {"id": 1, "name": "Clavier", "price": 249.9}, "quantity": 2, "total": 499.8}
+POST http://127.0.0.1:8082/api/orders  ->  HTTP 201
+  Requête {"customerEmail": "client@example.com", "amount": 149.9}
+  Réponse {"orderId": "a97b7d16-e02e-427c-9b0c-c49a3949020b", "customerEmail": "client@example.com", "amount": 149.9, "createdAt": "2026-11-08T22:32:35.502743753Z", "productId": null, "quantity": null, "status": "CREATED"}
+POST http://127.0.0.1:8082/api/orders  ->  HTTP 400
+  Requête {"customerEmail": "incorrect", "amount": 0}
+  Réponse {"type": "about:blank", "title": "Bad Request", "status": 400, "detail": "Invalid request content.", "instance": "/api/orders"}
+POST http://127.0.0.1:8180/orders  ->  HTTP 400
+  Requête {"productId": 1, "quantity": 0}
+  Réponse {"type": "about:blank", "title": "Bad Request", "status": 400, "detail": "Invalid request content.", "instance": "/orders"}
+POST http://127.0.0.1:8180/orders  ->  HTTP 404
+  Requête {"productId": 999, "quantity": 1}
+  Réponse {"type": "about:blank", "title": "Not Found", "status": 404, "detail": "Produit introuvable", "instance": "/orders"}

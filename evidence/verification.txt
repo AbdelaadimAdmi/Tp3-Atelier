@@ -1,0 +1,117 @@
+Vérification démarrée à 2026-11-08T22:32:34+00:00
+
+=== Discovery, Config Server et REST ===
+Eureka : API-GATEWAY, ORDER-SERVICE, PRODUCT-SERVICE
+GET http://127.0.0.1:8888/product-service/default  ->  HTTP 200
+  Réponse {"name": "product-service", "profiles": ["default"], "label": null, "version": null, "state": null, "propertySources": [{"name": "file:config-repo/product-service.yml", "source": {"message.bienvenue": "Configuration chargée depuis Config Server"}}]}
+GET http://127.0.0.1:8081/products/config  ->  HTTP 200
+  Réponse {"bienvenue": "Configuration chargée depuis Config Server"}
+GET http://127.0.0.1:8081/products/1  ->  HTTP 200
+  Réponse {"id": 1, "name": "Clavier", "price": 249.9}
+GET http://127.0.0.1:8180/products/1  ->  HTTP 200
+  Réponse {"id": 1, "name": "Clavier", "price": 249.9}
+POST http://127.0.0.1:8082/orders  ->  HTTP 201
+  Requête {"productId": 1, "quantity": 2, "customerEmail": "client@example.com"}
+  Réponse {"orderId": "5e6a26cf-e88c-4130-a48d-03e211b3585e", "status": "CREATED", "product": {"id": 1, "name": "Clavier", "price": 249.9}, "quantity": 2, "total": 499.8}
+POST http://127.0.0.1:8180/orders  ->  HTTP 201
+  Requête {"productId": 1, "quantity": 2, "customerEmail": "client@example.com"}
+  Réponse {"orderId": "9cc15fcb-f149-4aa8-a4c7-4a51a20a3e6d", "status": "CREATED", "product": {"id": 1, "name": "Clavier", "price": 249.9}, "quantity": 2, "total": 499.8}
+POST http://127.0.0.1:8082/api/orders  ->  HTTP 201
+  Requête {"customerEmail": "client@example.com", "amount": 149.9}
+  Réponse {"orderId": "a97b7d16-e02e-427c-9b0c-c49a3949020b", "customerEmail": "client@example.com", "amount": 149.9, "createdAt": "2026-11-08T22:32:35.502743753Z", "productId": null, "quantity": null, "status": "CREATED"}
+POST http://127.0.0.1:8082/api/orders  ->  HTTP 400
+  Requête {"customerEmail": "incorrect", "amount": 0}
+  Réponse {"type": "about:blank", "title": "Bad Request", "status": 400, "detail": "Invalid request content.", "instance": "/api/orders"}
+POST http://127.0.0.1:8180/orders  ->  HTTP 400
+  Requête {"productId": 1, "quantity": 0}
+  Réponse {"type": "about:blank", "title": "Bad Request", "status": 400, "detail": "Invalid request content.", "instance": "/orders"}
+POST http://127.0.0.1:8180/orders  ->  HTTP 404
+  Requête {"productId": 999, "quantity": 1}
+  Réponse {"type": "about:blank", "title": "Not Found", "status": 404, "detail": "Produit introuvable", "instance": "/orders"}
+
+=== RabbitMQ : arrêt, attente et reprise ===
+POST http://127.0.0.1:8180/orders  ->  HTTP 201
+  Requête {"productId": 1, "quantity": 2, "customerEmail": "client@example.com"}
+  Réponse {"orderId": "7132e954-cf2c-40eb-818e-5861bce30df4", "status": "CREATED", "product": {"id": 1, "name": "Clavier", "price": 249.9}, "quantity": 2, "total": 499.8}
+Notification arrêtée, file orders.notifications : ready=1
+Après redémarrage : notification reçue, file vide après ACK.
+POST http://127.0.0.1:8180/orders  ->  HTTP 201
+  Requête {"productId": 1, "quantity": 13, "customerEmail": "client@example.com"}
+  Réponse {"orderId": "d7c329e4-acf9-40d1-aad1-bd890fb4494f", "status": "CREATED", "product": {"id": 1, "name": "Clavier", "price": 249.9}, "quantity": 13, "total": 3248.7}
+DLQ RabbitMQ : 2 -> 3, 3 tentatives.
+notification-service-1  | 2026-11-08T22:32:52.293Z  WARN 1 --- [notification-service] [ntContainer#0-1] c.e.n.RabbitNotificationListener         : Échec RabbitMQ simulé orderId=d7c329e4-acf9-40d1-aad1-bd890fb4494f
+notification-service-1  | 2026-11-08T22:32:52.596Z  WARN 1 --- [notification-service] [ntContainer#0-1] c.e.n.RabbitNotificationListener         : Échec RabbitMQ simulé orderId=d7c329e4-acf9-40d1-aad1-bd890fb4494f
+notification-service-1  | 2026-11-08T22:32:52.897Z  WARN 1 --- [notification-service] [ntContainer#0-1] c.e.n.RabbitNotificationListener         : Échec RabbitMQ simulé orderId=d7c329e4-acf9-40d1-aad1-bd890fb4494f
+POST http://127.0.0.1:8180/orders  ->  HTTP 201
+  Requête {"productId": 1, "quantity": 7, "customerEmail": "client@example.com"}
+  Réponse {"orderId": "3bf2a517-cdf3-414f-82f9-12702c81391f", "status": "CREATED", "product": {"id": 1, "name": "Clavier", "price": 249.9}, "quantity": 7, "total": 1749.3}
+Arrêt brutal pendant un traitement : redelivered=true, puis notification.
+Republication du même orderId : notification déjà traitée, aucun second effet.
+
+=== Catalogue indisponible et rétablissement ===
+POST http://127.0.0.1:8180/orders  ->  HTTP 503
+  Requête {"productId": 1, "quantity": 2, "customerEmail": "client@example.com"}
+  Réponse {"type": "about:blank", "title": "Service Unavailable", "status": 503, "detail": "Catalogue indisponible. Commande non créée.", "instance": "/orders"}
+Produit bloqué : échec en 2.12 s, avec deux appels tentés vers le catalogue.
+POST http://127.0.0.1:8180/orders  ->  HTTP 503
+  Requête {"productId": 1, "quantity": 2, "customerEmail": "client@example.com"}
+  Réponse {"type": "about:blank", "title": "Service Unavailable", "status": 503, "detail": "Catalogue indisponible. Commande non créée.", "instance": "/orders"}
+POST http://127.0.0.1:8180/orders  ->  HTTP 503
+  Requête {"productId": 1, "quantity": 2, "customerEmail": "client@example.com"}
+  Réponse {"type": "about:blank", "title": "Service Unavailable", "status": 503, "detail": "Catalogue indisponible. Commande non créée.", "instance": "/orders"}
+POST http://127.0.0.1:8180/orders  ->  HTTP 503
+  Requête {"productId": 1, "quantity": 2, "customerEmail": "client@example.com"}
+  Réponse {"type": "about:blank", "title": "Service Unavailable", "status": 503, "detail": "Catalogue indisponible. Commande non créée.", "instance": "/orders"}
+POST http://127.0.0.1:8180/orders  ->  HTTP 201
+  Requête {"productId": 1, "quantity": 2, "customerEmail": "client@example.com"}
+  Réponse {"orderId": "7169aea4-78e6-4f50-aae6-aa60e4cab12e", "status": "CREATED", "product": {"id": 1, "name": "Clavier", "price": 249.9}, "quantity": 2, "total": 499.8}
+order-service-1  | 2026-11-08T22:33:48.644Z  WARN 1 --- [order-service] [nio-8082-exec-2] com.example.order.ProductLookup          : Fallback Product Service : CallNotPermittedException
+order-service-1  | 2026-11-08T22:33:49.423Z  WARN 1 --- [order-service] [nio-8082-exec-3] com.example.order.ProductLookup          : Fallback Product Service : CallNotPermittedException
+order-service-1  | 2026-11-08T22:33:50.190Z  WARN 1 --- [order-service] [nio-8082-exec-4] com.example.order.ProductLookup          : Fallback Product Service : CallNotPermittedException
+order-service-1  | 2026-11-08T22:33:50.964Z  WARN 1 --- [order-service] [nio-8082-exec-5] com.example.order.ProductLookup          : Fallback Product Service : CallNotPermittedException
+order-service-1  | 2026-11-08T22:33:51.731Z  WARN 1 --- [order-service] [nio-8082-exec-6] com.example.order.ProductLookup          : Fallback Product Service : CallNotPermittedException
+order-service-1  | 2026-11-08T22:33:52.494Z  WARN 1 --- [order-service] [nio-8082-exec-7] com.example.order.ProductLookup          : Fallback Product Service : CallNotPermittedException
+order-service-1  | 2026-11-08T22:33:53.256Z  INFO 1 --- [order-service] [nio-8082-exec-8] com.example.order.ProductLookup          : Circuit productService : State transition from OPEN to HALF_OPEN
+order-service-1  | 2026-11-08T22:33:53.258Z  WARN 1 --- [order-service] [nio-8082-exec-8] com.example.order.ProductLookup          : Nouvelle tentative Product Service (1)
+order-service-1  | 2026-11-08T22:33:53.560Z  INFO 1 --- [order-service] [nio-8082-exec-8] com.example.order.ProductLookup          : Circuit productService : State transition from HALF_OPEN to OPEN
+order-service-1  | 2026-11-08T22:33:53.560Z  WARN 1 --- [order-service] [nio-8082-exec-8] com.example.order.ProductLookup          : Fallback Product Service : Unavailable
+order-service-1  | 2026-11-08T22:33:54.326Z  WARN 1 --- [order-service] [nio-8082-exec-9] com.example.order.ProductLookup          : Fallback Product Service : CallNotPermittedException
+order-service-1  | 2026-11-08T22:33:55.089Z  WARN 1 --- [order-service] [io-8082-exec-10] com.example.order.ProductLookup          : Fallback Product Service : CallNotPermittedException
+order-service-1  | 2026-11-08T22:33:55.854Z  WARN 1 --- [order-service] [nio-8082-exec-1] com.example.order.ProductLookup          : Fallback Product Service : CallNotPermittedException
+order-service-1  | 2026-11-08T22:33:56.632Z  WARN 1 --- [order-service] [nio-8082-exec-2] com.example.order.ProductLookup          : Fallback Product Service : CallNotPermittedException
+order-service-1  | 2026-11-08T22:33:57.397Z  WARN 1 --- [order-service] [nio-8082-exec-3] com.example.order.ProductLookup          : Fallback Product Service : CallNotPermittedException
+order-service-1  | 2026-11-08T22:33:58.162Z  WARN 1 --- [order-service] [nio-8082-exec-4] com.example.order.ProductLookup          : Fallback Product Service : CallNotPermittedException
+order-service-1  | 2026-11-08T22:33:58.938Z  WARN 1 --- [order-service] [nio-8082-exec-5] com.example.order.ProductLookup          : Fallback Product Service : CallNotPermittedException
+order-service-1  | 2026-11-08T22:33:59.733Z  WARN 1 --- [order-service] [nio-8082-exec-6] com.example.order.ProductLookup          : Fallback Product Service : CallNotPermittedException
+order-service-1  | 2026-11-08T22:34:00.501Z  WARN 1 --- [order-service] [nio-8082-exec-7] com.example.order.ProductLookup          : Fallback Product Service : CallNotPermittedException
+order-service-1  | 2026-11-08T22:34:01.265Z  WARN 1 --- [order-service] [nio-8082-exec-8] com.example.order.ProductLookup          : Fallback Product Service : CallNotPermittedException
+order-service-1  | 2026-11-08T22:34:02.027Z  WARN 1 --- [order-service] [nio-8082-exec-9] com.example.order.ProductLookup          : Fallback Product Service : CallNotPermittedException
+order-service-1  | 2026-11-08T22:34:02.791Z  WARN 1 --- [order-service] [io-8082-exec-10] com.example.order.ProductLookup          : Fallback Product Service : CallNotPermittedException
+order-service-1  | 2026-11-08T22:34:03.559Z  WARN 1 --- [order-service] [nio-8082-exec-1] com.example.order.ProductLookup          : Fallback Product Service : CallNotPermittedException
+order-service-1  | 2026-11-08T22:34:04.322Z  INFO 1 --- [order-service] [nio-8082-exec-2] com.example.order.ProductLookup          : Circuit productService : State transition from OPEN to HALF_OPEN
+order-service-1  | 2026-11-08T22:34:04.402Z  INFO 1 --- [order-service] [nio-8082-exec-2] com.example.order.ProductLookup          : Circuit productService : State transition from HALF_OPEN to CLOSED
+
+=== Kafka : partitions, commits et messages en erreur ===
+Topic: commandes-creees	TopicId: lRBvwfEVTxS2VbFuFE6wPw	PartitionCount: 3	ReplicationFactor: 1	Configs: 
+	Topic: commandes-creees	Partition: 0	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+	Topic: commandes-creees	Partition: 1	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+	Topic: commandes-creees	Partition: 2	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr:
+Topic: orders-events	TopicId: 4fVb2LCkTai6e0pfoSkzzA	PartitionCount: 3	ReplicationFactor: 1	Configs: 
+	Topic: orders-events	Partition: 0	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+	Topic: orders-events	Partition: 1	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+	Topic: orders-events	Partition: 2	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr:
+notification-service-1  | 2026-11-08T22:32:56.035Z  WARN 1 --- [notification-service] [ntainer#0-0-C-1] c.e.n.KafkaNotificationListener          : Échec Kafka simulé key=d7c329e4-acf9-40d1-aad1-bd890fb4494f partition=0 offset=9
+notification-service-1  | 2026-11-08T22:32:56.523Z  WARN 1 --- [notification-service] [ntainer#0-0-C-1] c.e.n.KafkaNotificationListener          : Échec Kafka simulé key=d7c329e4-acf9-40d1-aad1-bd890fb4494f partition=0 offset=9
+notification-service-1  | 2026-11-08T22:32:57.028Z  WARN 1 --- [notification-service] [ntainer#0-0-C-1] c.e.n.KafkaNotificationListener          : Échec Kafka simulé key=d7c329e4-acf9-40d1-aad1-bd890fb4494f partition=0 offset=9
+notification-service-1  | 2026-11-08T22:32:58.358Z  INFO 1 --- [notification-service] [ntainer#0-0-C-1] c.e.n.KafkaNotificationListener          : Kafka reçu topic=orders-events key=3bf2a517-cdf3-414f-82f9-12702c81391f partition=2 offset=1
+GROUP                 TOPIC            PARTITION  CURRENT-OFFSET  LOG-END-OFFSET  LAG             CONSUMER-ID                                                           HOST            CLIENT-ID
+atelier-notifications orders-events    0          12              12              0               consumer-atelier-notifications-1-1e7f853f-a4b7-443d-9020-54181c6b7928 /172.18.0.7     consumer-atelier-notifications-1
+atelier-notifications orders-events    1          5               5               0               consumer-atelier-notifications-1-1e7f853f-a4b7-443d-9020-54181c6b7928 /172.18.0.7     consumer-atelier-notifications-1
+atelier-notifications orders-events    2          2               2               0               consumer-atelier-notifications-1-1e7f853f-a4b7-443d-9020-54181c6b7928 /172.18.0.7     consumer-atelier-notifications-1
+atelier-notifications commandes-creees 0          4               4               0               consumer-atelier-notifications-1-1e7f853f-a4b7-443d-9020-54181c6b7928 /172.18.0.7     consumer-atelier-notifications-1
+atelier-notifications commandes-creees 2          6               6               0               consumer-atelier-notifications-1-1e7f853f-a4b7-443d-9020-54181c6b7928 /172.18.0.7     consumer-atelier-notifications-1
+atelier-notifications commandes-creees 1          4               4               0               consumer-atelier-notifications-1-1e7f853f-a4b7-443d-9020-54181c6b7928 /172.18.0.7     consumer-atelier-notifications-1
+Topic orders-events.DLT (commande du test) :
+Partition:0	Offset:1	d7c329e4-acf9-40d1-aad1-bd890fb4494f	{"orderId":"d7c329e4-acf9-40d1-aad1-bd890fb4494f","customerEmail":"client@example.com","amount":3248.70,"createdAt":"2026-11-08T22:32:52.290385234Z","productId":1,"quantity":13,"status":"CREATED"}
+
+Tous les contrôles principaux ont réussi.

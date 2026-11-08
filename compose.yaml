@@ -1,0 +1,162 @@
+name: springcloud-atelier
+
+x-app: &app
+  mem_limit: 512m
+
+x-broker-environment: &brokers
+  RABBITMQ_HOST: rabbitmq
+  KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+
+x-cloud-environment: &cloud
+  EUREKA_URL: http://discovery-server:8761/eureka/
+  CONFIG_SERVER_URL: http://config-server:8888
+
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    hostname: rabbitmq
+    ports:
+      - "127.0.0.1:5672:5672"
+      - "127.0.0.1:15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: atelier
+      RABBITMQ_DEFAULT_PASS: atelier123
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "check_running"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  kafka:
+    image: apache/kafka:3.9.1
+    hostname: kafka
+    ports:
+      - "127.0.0.1:9092:9092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: "INTERNAL://:29092,EXTERNAL://:9092,CONTROLLER://:9093"
+      KAFKA_ADVERTISED_LISTENERS: "INTERNAL://kafka:29092,EXTERNAL://localhost:9092"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT"
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD", "/opt/kafka/bin/kafka-topics.sh", "--bootstrap-server", "kafka:29092", "--list"]
+      interval: 8s
+      timeout: 8s
+      retries: 15
+
+  config-server:
+    <<: *app
+    build:
+      context: .
+      args:
+        SERVICE: config-server
+    ports:
+      - "127.0.0.1:8888:8888"
+    volumes:
+      - ./config-repo:/app/config-repo:ro
+    healthcheck:
+      test: ["CMD", "bash", "-ec", "echo > /dev/tcp/localhost/8888"]
+      interval: 4s
+      timeout: 2s
+      retries: 25
+
+  discovery-server:
+    <<: *app
+    build:
+      context: .
+      args:
+        SERVICE: discovery-server
+    ports:
+      - "127.0.0.1:8761:8761"
+    healthcheck:
+      test: ["CMD", "bash", "-ec", "echo > /dev/tcp/localhost/8761"]
+      interval: 4s
+      timeout: 2s
+      retries: 25
+
+  product-service:
+    <<: *app
+    build:
+      context: .
+      args:
+        SERVICE: product-service
+    environment: *cloud
+    ports:
+      - "127.0.0.1:8081:8081"
+    depends_on:
+      config-server:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+
+  order-service:
+    <<: *app
+    build:
+      context: .
+      args:
+        SERVICE: order-service
+    environment:
+      <<: [*cloud, *brokers]
+    ports:
+      - "127.0.0.1:8082:8082"
+    depends_on:
+      config-server:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+
+  notification-service:
+    <<: *app
+    build:
+      context: .
+      args:
+        SERVICE: notification-service
+    environment:
+      <<: *brokers
+      NOTIFICATION_DIRECTORY: /data/notifications
+    ports:
+      - "127.0.0.1:8083:8083"
+    volumes:
+      - notification-data:/data
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+
+  api-gateway:
+    <<: *app
+    build:
+      context: .
+      args:
+        SERVICE: api-gateway
+    ports:
+      - "127.0.0.1:${GATEWAY_PORT:-8080}:8080"
+    environment: *cloud
+    depends_on:
+      discovery-server:
+        condition: service_healthy
+
+volumes:
+  rabbitmq-data:
+  kafka-data:
+  notification-data:
+
+
